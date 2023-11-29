@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
@@ -9,10 +9,13 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract SantoTheCentaur is ERC721, ERC2981, ERC721Enumerable, Pausable, Ownable, AccessControl, ReentrancyGuard {
     using Strings for uint256;
     using Counters for Counters.Counter;
+
+    AggregatorV3Interface internal dataFeed;
 
     enum Status {
         WhiteListSale,
@@ -53,6 +56,10 @@ contract SantoTheCentaur is ERC721, ERC2981, ERC721Enumerable, Pausable, Ownable
     ) ERC721(_name, _symbol) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SERVER_ROLE, _serverRole);
+
+        dataFeed = AggregatorV3Interface(
+            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+        );
 
         openSupply = 7777;
         mintMax[Status.WhiteListSale] = 3500;
@@ -313,6 +320,18 @@ contract SantoTheCentaur is ERC721, ERC2981, ERC721Enumerable, Pausable, Ownable
             ids[i] = _tokenId;
         }
         return ids;
+    }
+
+    function getChainlinkEthDataFeed() public view returns (int) {
+        // prettier-ignore
+        (
+            /* uint80 roundID */,
+            int answer,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = dataFeed.latestRoundData();
+        return answer;
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
